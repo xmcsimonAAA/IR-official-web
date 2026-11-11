@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>XMax IR 后台</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark;--bg:#050912;--surface:#0c1528;--surface2:#111d37;--line:#1c2a4a;--text:#eaf0fb;--muted:#8e9bbd;--accent:#45c8ff;--accent2:#8b7bff;--good:#3ddc97;--bad:#ff7d8b}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.6 system-ui,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:0}
+.muted{color:var(--muted);font-size:13.5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:18px}
+input,textarea,select{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;padding:10px 12px}
+textarea{min-height:64px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent2);outline-offset:1px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:10px;padding:9px 16px;font:500 14px system-ui,sans-serif;cursor:pointer}
+.btn:hover{border-color:var(--accent)}.btn.p{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#04101f;border:0}
+.btn.s{padding:6px 10px;font-size:13px}.btn.d{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.pulse{animation:pulse 1.6s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 35%,transparent)}}
+.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}@media(max-width:720px){.row{grid-template-columns:1fr}}
+.tabs{display:flex;gap:6px;margin-top:18px}.tabs button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:10px;padding:9px 16px;cursor:pointer;font:500 14px system-ui,sans-serif}
+.tabs button[aria-selected="true"]{background:var(--surface2);color:var(--text)}
+.item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item b{display:block;font-weight:600}.item .muted a{color:var(--accent);word-break:break-all}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.bar{position:sticky;bottom:0;margin-top:18px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.msg{font-size:14px}.ok{color:var(--good)}.err{color:var(--bad)}
+.prog{height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-top:8px;display:none}.prog i{display:block;height:100%;width:35%;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:ind 1.1s ease-in-out infinite}.prog.done i,.prog.det i{animation:none;transform:none}.prog.done i{width:100%}@keyframes ind{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);margin-left:6px}
+[hidden]{display:none!important}
+.editor{min-height:260px;max-height:520px;overflow:auto;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.7}
+.editor:focus{outline:2px solid var(--accent2);outline-offset:1px}.editor img{display:none}.editor p{margin:0 0 .8em}
+.tag.auto{color:var(--accent)}.tag.off{color:var(--bad)}.item.dim b,.item.dim .muted{opacity:.5}
+input[readonly]{opacity:.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>XMax IR 网站后台</h1>
+<div class="muted">管理"公司治理文件"、"简报资料"和"新闻稿"。点击"保存并发布"后，网站立即更新（访客刷新页面即可看到）。</div>
+
+<div class="card" id="login">
+<h2>登录</h2>
+<label for="pw">后台密码</label>
+<input id="pw" type="password" autocomplete="current-password">
+<div style="margin-top:14px"><button class="btn p" id="loginBtn">登录</button> <span class="msg" id="loginMsg"></span></div>
+</div>
+
+<div id="app" hidden>
+<div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-s="governance">公司治理文件</button><button role="tab" aria-selected="false" data-s="presentations">简报资料</button><button role="tab" aria-selected="false" data-s="news">新闻稿</button></div>
+<div class="card" id="docsCard"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 id="secTitle">公司治理文件</h2><button class="btn" id="addBtn">＋ 新增</button></div>
+<div id="list" style="margin-top:10px"></div></div>
+
+<div class="card" id="form" hidden>
+<h2 id="formTitle">新增</h2>
+<div class="row">
+<div><label>英文标题 *</label><input id="f_ten"></div>
+<div><label>简体中文标题 *</label><input id="f_tzhs"></div>
+<div><label>繁体中文标题（可留空，留空显示简体）</label><input id="f_tzht"></div>
+</div>
+<div id="presFields">
+<div class="row">
+<div><label>英文说明</label><textarea id="f_den"></textarea></div>
+<div><label>简体中文说明</label><textarea id="f_dzhs"></textarea></div>
+<div><label>繁体中文说明（可留空）</label><textarea id="f_dzht"></textarea></div>
+</div>
+<div class="row">
+<div><label>图标</label><select id="f_icon"><option value="deck">演示文稿</option><option value="ai">AI / 星形</option><option value="doc">文档</option><option value="download">下载</option></select></div>
+</div>
+</div>
+<label>文件（选择后自动上传）</label>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input id="f_file" type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" style="flex:1;min-width:220px"><button class="btn" id="upBtn">重新上传</button></div>
+<div class="prog" id="prog"><i></i></div>
+<label>或者直接填写文件链接（上传后会自动填入）</label>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><input id="f_url" placeholder="https://..." style="flex:1;min-width:220px"><button class="btn d" id="clearBtn" type="button">移除文件</button></div>
+<div class="row"><div><label>按钮文字（可留空，默认"PDF"或"下载"）</label><input id="f_label" placeholder="例如 PDF、EDGAR"></div></div>
+<div class="muted" id="emptyHint" style="margin-top:8px">简报资料不填链接时，网站上会显示"准备中"。</div>
+<div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn p" id="okBtn">完成编辑（还需发布）</button><button class="btn" id="cancelBtn">取消</button><span class="msg" id="formMsg"></span></div>
+<div class="muted" style="margin-top:10px">选好文件会自动上传。编辑完成后，记得点页面底部的"保存并发布"，官网才会更新。</div>
+</div>
+
+<div class="card" id="newsCard" hidden>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>新闻稿</h2><button class="btn" id="nAddBtn">＋ 新增新闻稿</button></div>
+<div class="muted" style="margin-top:6px">这里包括网站内置的新闻、从 SEC 自动抓取的新闻（可以补充中文标题、修改分类或隐藏），以及在后台添加的新闻（可以编辑、删除）。</div>
+<div id="nlist" style="margin-top:10px"></div></div>
+
+<div class="card" id="nform" hidden>
+<h2 id="nformTitle">新增新闻稿</h2>
+<div id="nInfo" class="muted" style="margin-top:6px"></div>
+<div class="row">
+<div><label>发布日期 *</label><input id="n_date" type="date"></div>
+<div><label>分类</label><select id="n_cat"><option value="AI">AI</option><option value="Results">业绩</option><option value="M&amp;A">并购</option><option value="Corporate">公司动态</option></select></div>
+<div id="n_hideBox"><label>网站显示</label><label style="display:flex;gap:8px;align-items:center;color:var(--text);margin:10px 0;font-size:14px"><input type="checkbox" id="n_hidden" style="width:auto"> 在网站上隐藏这篇新闻</label></div>
+</div>
+<div class="row">
+<div><label>英文标题 *</label><input id="n_ten"></div>
+<div><label>简体中文标题 *</label><input id="n_tzhs"></div>
+<div><label>繁体中文标题（可留空，留空显示简体）</label><input id="n_tzht"></div>
+</div>
+<div id="n_full">
+<label>原文链接（可留空，例如 GlobeNewswire 上这篇新闻的网址）</label><input id="n_url" placeholder="https://...">
+<label>正文（从 GlobeNewswire 或 Word 复制后直接粘贴，保留加粗、列表等基本格式和安全的附件链接）</label>
+<div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;align-items:center"><button class="btn s" type="button" id="n_plain">清除格式（只保留文字和分段）</button><span class="muted" id="n_count"></span></div>
+<div id="n_body" class="editor" contenteditable="true"></div>
+</div>
+<div style="margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn p" id="nOkBtn">完成编辑（还需发布）</button><button class="btn" id="nCancelBtn">取消</button><span class="msg" id="nformMsg"></span></div>
+<div class="muted" style="margin-top:10px">编辑完成后，记得点页面底部的"保存并发布"，官网才会更新。</div>
+</div>
+
+<div class="bar"><span class="msg" id="saveMsg">尚未修改</span><div style="display:flex;gap:10px"><a class="btn" href="/" target="_blank" rel="noopener">查看网站 ↗</a><button class="btn p" id="saveBtn" disabled>保存并发布</button></div></div>
+</div>
+</div>
+
+<script src="/vendor/purify.min.js"></script>
+<script type="module">
+const $ = (s) => document.querySelector(s);
+let PW = '', DATA = null, SEC = 'governance', EDIT = -1, DIRTY = false;
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+let DIRTY_D = false, DIRTY_N = false;
+function setDirty(v, k) { if (k === 'n') DIRTY_N = v; else if (k === 'all') { DIRTY_D = v; DIRTY_N = v; } else DIRTY_D = v; DIRTY = DIRTY_D || DIRTY_N; $('#saveBtn').disabled = !DIRTY; $('#saveBtn').classList.toggle('pulse', DIRTY); $('#saveMsg').className = 'msg'; $('#saveMsg').textContent = DIRTY ? '有未发布的修改，请点右边的“保存并发布”' : '尚未修改'; }
+addEventListener('beforeunload', (e) => { if (DIRTY) { e.preventDefault(); e.returnValue = ''; } });
+
+async function login() {
+  PW = $('#pw').value; $('#loginMsg').textContent = '检查中…'; $('#loginMsg').className = 'msg';
+  try {
+    const r = await fetch('/api/docs?check=1', { headers: { 'x-admin-password': PW } });
+    const j = await r.json();
+    if (!r.ok) throw new Error(r.status === 429 ? '登录尝试过多，请15分钟后再试。' : '密码不正确。');
+    if (!j.password) throw new Error('网站还没有设置后台密码（ADMIN_PASSWORD）。');
+    if (!j.ok) throw new Error('密码不正确。');
+    if (!j.storage) throw new Error('服务器的文件存储目录无法写入，请联系 IT 检查 STORAGE_DIR 的权限。');
+    $('#pw').value = ''; // Keep the credential in memory only.
+    const d = await (await fetch('/api/docs?fresh=1')).json();
+    DATA = d.data; $('#login').hidden = true; $('#app').hidden = false; render();
+  } catch (e) { $('#loginMsg').className = 'msg err'; $('#loginMsg').textContent = e.message || '登录失败'; }
+}
+$('#loginBtn').onclick = login;
+$('#pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+sessionStorage.removeItem('xmax-admin'); // Remove credentials saved by earlier versions.
+
+document.querySelectorAll('.tabs button').forEach((b) => b.onclick = async () => {
+  SEC = b.dataset.s; document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', x === b));
+  closeForm(); closeNews();
+  const isNews = SEC === 'news';
+  $('#docsCard').hidden = isNews; $('#newsCard').hidden = !isNews;
+  if (!isNews) { $('#secTitle').textContent = b.textContent; render(); return; }
+  if (!NLOADED) {
+    $('#nlist').innerHTML = '<div class="muted" style="padding:14px 0">读取中…</div>';
+    try { await loadNews(); } catch (e) { $('#nlist').innerHTML = '<div class="msg err" style="padding:14px 0">' + esc(e.message) + '（请刷新页面重试）</div>'; return; }
+  }
+  if (SEC === 'news') renderNews();
+});
+
+function render() {
+  const arr = DATA[SEC] || [];
+  $('#list').innerHTML = arr.length ? arr.map((x, i) => `<div class="item"><div><b>${esc(x.title.zhs || x.title.en)}<span class="tag">${x.url ? esc(x.label || (SEC === 'governance' ? 'PDF' : '下载')) : '准备中'}</span></b><div class="muted">${esc(x.title.en)}${x.url ? ` · <a href="${esc(x.url)}" target="_blank" rel="noopener">打开文件</a>` : ''}</div></div>
+    <div class="acts"><button class="btn s" data-a="up" data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn s" data-a="down" data-i="${i}" ${i === arr.length - 1 ? 'disabled' : ''}>↓</button><button class="btn s" data-a="edit" data-i="${i}">编辑</button><button class="btn s d" data-a="del" data-i="${i}">删除</button></div></div>`).join('')
+    : '<div class="muted" style="padding:14px 0">还没有内容，点击"新增"。</div>';
+  $('#list').querySelectorAll('button').forEach((b) => b.onclick = () => act(b.dataset.a, +b.dataset.i));
+}
+function act(a, i) {
+  const arr = DATA[SEC];
+  if (a === 'up' && i > 0) [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+  if (a === 'down' && i < arr.length - 1) [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+  if (a === 'del' && confirm('确定删除"' + (arr[i].title.zhs || arr[i].title.en) + '"？发布后网站上会移除。')) arr.splice(i, 1);
+  if (a === 'edit') return openForm(i);
+  if (a !== 'edit') setDirty(true);
+  render();
+}
+function openForm(i) {
+  EDIT = i; const x = i >= 0 ? DATA[SEC][i] : { title: {}, desc: {}, icon: 'doc', url: '', label: '' };
+  $('#formTitle').textContent = i >= 0 ? '编辑' : '新增';
+  $('#f_ten').value = x.title.en || ''; $('#f_tzhs').value = x.title.zhs || ''; $('#f_tzht').value = x.title.zht || '';
+  $('#f_den').value = (x.desc || {}).en || ''; $('#f_dzhs').value = (x.desc || {}).zhs || ''; $('#f_dzht').value = (x.desc || {}).zht || '';
+  $('#f_icon').value = x.icon || 'doc'; $('#f_url').value = x.url || ''; $('#f_label').value = x.label || ''; $('#f_file').value = '';
+  $('#presFields').hidden = SEC !== 'presentations'; $('#emptyHint').hidden = SEC !== 'presentations';
+  $('#formMsg').textContent = ''; UPLOADED_FOR = null; $('#prog').style.display = 'none'; $('#form').hidden = false; $('#form').scrollIntoView({ behavior: 'smooth' });
+}
+function closeForm() { $('#form').hidden = true; EDIT = -1; }
+$('#addBtn').onclick = () => openForm(-1);
+$('#cancelBtn').onclick = closeForm;
+
+let UPLOADING = null, UPLOADED_FOR = null;
+async function doUpload() {
+  const f = $('#f_file').files[0];
+  if (!f) { $('#formMsg').className = 'msg err'; $('#formMsg').textContent = '请先选择文件'; return false; }
+  if (UPLOADED_FOR === f) return true;
+  if (UPLOADING) return UPLOADING;
+  UPLOADING = (async () => {
+    $('#upBtn').disabled = true; $('#okBtn').disabled = true; $('#prog').style.display = 'block'; $('#prog').classList.remove('done', 'det'); $('#prog i').style.width = '';
+    $('#formMsg').className = 'msg'; $('#formMsg').textContent = '上传中…';
+    try {
+      const blob = await new Promise((resolve, reject) => {
+        const x = new XMLHttpRequest();
+        x.open('POST', '/api/upload?name=' + encodeURIComponent(f.name));
+        x.setRequestHeader('x-admin-password', PW);
+        x.setRequestHeader('content-type', f.type || 'application/octet-stream');
+        x.upload.onprogress = (e) => { if (e.lengthComputable) { $('#prog').classList.add('det'); $('#prog i').style.width = Math.max(3, Math.round(e.loaded / e.total * 100)) + '%'; $('#formMsg').textContent = '上传中… ' + Math.round(e.loaded / e.total * 100) + '%'; } };
+        x.onload = () => {
+          let j = {}; try { j = JSON.parse(x.responseText || '{}'); } catch (e) { /* not JSON */ }
+          if (x.status === 200 && j.url) return resolve(j);
+          const M = { unauthorized: '密码已失效，请刷新页面重新登录', file_type_not_allowed: '不支持这种文件类型（支持 PDF、PPT、Word、Excel、PNG、JPG）', too_large: '文件太大（超过服务器允许的大小）', storage_not_configured: '服务器的文件存储目录无法写入，请联系 IT', upload_incomplete: '文件没有完整上传，请重试', empty_file: '文件是空的' };
+          reject(new Error(M[j.error] || (x.status === 413 ? '文件太大，服务器拒绝接收（请联系 IT 调整 Nginx 的 client_max_body_size）' : '服务器返回错误 ' + x.status)));
+        };
+        x.onerror = () => reject(new Error('网络错误，上传中断'));
+        x.send(f);
+      });
+      // check that the stored file has the same size as the original
+      let stored = -1;
+      try { const h = await fetch(blob.url + '?check=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); stored = +(h.headers.get('content-length') || -1); } catch (e) { /* size check unavailable */ }
+      if (stored >= 0 && stored !== f.size) throw new Error('文件没有完整上传（原文件 ' + f.size + ' 字节，服务器上 ' + stored + ' 字节），请重试');
+      $('#f_url').value = blob.url; UPLOADED_FOR = f; $('#prog i').style.width = '100%';
+      $('#formMsg').className = 'msg ok'; $('#formMsg').textContent = '上传成功（' + (f.size / 1048576).toFixed(2) + ' MB' + (stored === f.size ? '，已核对文件大小' : '') + '）';
+      return true;
+    } catch (e) { $('#formMsg').className = 'msg err'; $('#formMsg').textContent = '上传失败：' + (e.message || e); return false; }
+    finally { $('#upBtn').disabled = false; $('#okBtn').disabled = false; $('#prog').classList.add('done'); UPLOADING = null; }
+  })();
+  return UPLOADING;
+}
+$('#f_file').addEventListener('change', () => { UPLOADED_FOR = null; if ($('#f_file').files[0]) doUpload(); });
+$('#upBtn').onclick = () => { UPLOADED_FOR = null; doUpload(); };
+$('#clearBtn').onclick = () => { $('#f_url').value = ''; $('#f_file').value = ''; UPLOADED_FOR = null; $('#prog').style.display = 'none'; $('#formMsg').className = 'msg'; $('#formMsg').textContent = '已移除文件，完成编辑并发布后，官网上这一项会显示“准备中”（公司治理文件需要有文件）'; };
+
+$('#okBtn').onclick = async () => {
+  if ($('#f_file').files[0] && UPLOADED_FOR !== $('#f_file').files[0]) { if (!(await doUpload())) return; }
+  const ten = $('#f_ten').value.trim(), tzhs = $('#f_tzhs').value.trim();
+  if (!ten || !tzhs) { $('#formMsg').className = 'msg err'; $('#formMsg').textContent = '请填写英文标题和简体中文标题'; return; }
+  const url = $('#f_url').value.trim();
+  if (url && !/^https?:\/\//i.test(url) && !/^\/files\/\S+$/.test(url)) { $('#formMsg').className = 'msg err'; $('#formMsg').textContent = '链接需要以 http:// 或 https:// 开头'; return; }
+  if (SEC === 'governance' && !url) { $('#formMsg').className = 'msg err'; $('#formMsg').textContent = '公司治理文件需要上传文件或填写链接'; return; }
+  const old = EDIT >= 0 ? DATA[SEC][EDIT] : null;
+  const x = { id: old ? old.id : uid(), title: { en: ten, zhs: tzhs, zht: $('#f_tzht').value.trim() }, url, label: $('#f_label').value.trim() };
+  if (SEC === 'presentations') {
+    x.icon = $('#f_icon').value; x.desc = { en: $('#f_den').value.trim(), zhs: $('#f_dzhs').value.trim(), zht: $('#f_dzht').value.trim() };
+    if (old && Number.isInteger(old.ti) && old.title.en === ten) x.ti = old.ti;   // keep built-in translations only if the English title is unchanged
+  }
+  if (EDIT >= 0) DATA[SEC][EDIT] = x; else DATA[SEC].push(x);
+  closeForm(); render(); setDirty(true);
+  $('#saveBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/* ===================== news ===================== */
+let NBASE = [], NCMS = { items: [], overrides: {} }, NEDIT = null, NLOADED = false;
+const CATZH = { AI: 'AI', Results: '业绩', 'M&A': '并购', Corporate: '公司动态' };
+const KIND = { cms: '后台添加', sec: '自动 · SEC', builtin: '网站内置' };
+async function loadNews() {
+  const r = await fetch('/api/newscms?base=1', { cache: 'no-store' });
+  if (!r.ok) throw new Error('新闻数据读取失败（' + r.status + '）');
+  const j = await r.json();
+  NBASE = (j.base || []).filter((x) => x.source !== 'cms');
+  NCMS = { items: (j.cms && j.cms.items) || [], overrides: (j.cms && j.cms.overrides) || {} };
+  NLOADED = true;
+}
+function newsRows() {
+  const rows = NCMS.items.map((x) => ({ kind: 'cms', id: x.id, date: x.date, cat: x.cat, en: x.title.en, zhs: x.title.zhs, zht: x.title.zht, url: x.url }));
+  for (const b of NBASE) {
+    const o = NCMS.overrides[b.id] || {};
+    rows.push({ kind: b.source === 'sec' ? 'sec' : 'builtin', id: b.id, date: b.date, cat: o.cat || b.cat, baseCat: b.cat, en: b.title,
+      zhs: o.zhs || b.zh || '', zht: o.zhs ? (o.zht || '') : (o.zht || b.zht || ''), url: b.url, hidden: !!o.hidden });
+  }
+  return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+function renderNews() {
+  const rows = newsRows();
+  $('#nlist').innerHTML = rows.length ? rows.map((x) => `<div class="item${x.hidden ? ' dim' : ''}"><div><b>${esc(x.zhs || x.en)}<span class="tag${x.kind === 'cms' ? '' : ' auto'}">${KIND[x.kind]}</span>${x.hidden ? '<span class="tag off">已隐藏</span>' : ''}${x.zhs ? '' : '<span class="tag off">缺中文标题</span>'}</b><div class="muted">${esc(x.date)} · ${esc(CATZH[x.cat] || x.cat)} · ${esc(x.en)}</div></div>
+    <div class="acts"><button class="btn s" data-a="edit" data-k="${x.kind}" data-id="${esc(x.id)}">编辑</button>${x.kind === 'cms' ? `<button class="btn s d" data-a="del" data-id="${esc(x.id)}">删除</button>` : `<button class="btn s" data-a="hide" data-id="${esc(x.id)}">${x.hidden ? '恢复显示' : '隐藏'}</button>`}</div></div>`).join('')
+    : '<div class="muted" style="padding:14px 0">还没有新闻。</div>';
+  $('#nlist').querySelectorAll('button').forEach((b) => b.onclick = () => nAct(b.dataset.a, b.dataset.id, b.dataset.k));
+}
+function nAct(a, id, k) {
+  if (a === 'edit') return openNews(id, k);
+  if (a === 'del') {
+    const i = NCMS.items.findIndex((x) => x.id === id);
+    if (i >= 0 && confirm('确定删除"' + (NCMS.items[i].title.zhs || NCMS.items[i].title.en) + '"？发布后网站上会移除。')) { NCMS.items.splice(i, 1); setDirty(true, 'n'); }
+  }
+  if (a === 'hide') {
+    const o = NCMS.overrides[id] || (NCMS.overrides[id] = {});
+    o.hidden = !o.hidden; cleanOverride(id); setDirty(true, 'n');
+  }
+  renderNews();
+}
+function cleanOverride(id) { const o = NCMS.overrides[id]; if (o && !o.zhs && !o.zht && !o.cat && !o.hidden) delete NCMS.overrides[id]; }
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function countBody() { const n = ($('#n_body').innerText || '').trim().length; $('#n_count').textContent = n ? '正文约 ' + n + ' 字' : ''; }
+function openNews(id, kind) {
+  closeForm();
+  const isNew = !id, isCms = isNew || kind === 'cms';
+  NEDIT = { id: id || null, kind: isNew ? 'cms' : kind };
+  const row = isNew ? null : newsRows().find((x) => x.id === id);
+  const cms = isCms && !isNew ? NCMS.items.find((x) => x.id === id) : null;
+  $('#nformTitle').textContent = isNew ? '新增新闻稿' : '编辑新闻稿';
+  $('#nInfo').textContent = isCms ? '' : '这篇新闻来自"' + KIND[kind] + '"，英文标题、日期和正文不能在这里修改；可以补充中文标题、修改分类或在网站上隐藏。';
+  $('#n_date').value = isNew ? today() : (row ? row.date : ''); $('#n_date').readOnly = !isCms;
+  $('#n_cat').value = isNew ? 'Corporate' : (row ? row.cat : 'Corporate');
+  $('#n_ten').value = isNew ? '' : (row ? row.en : ''); $('#n_ten').readOnly = !isCms;
+  $('#n_tzhs').value = isNew ? '' : (row ? row.zhs || '' : ''); $('#n_tzht').value = isNew ? '' : (row ? row.zht || '' : '');
+  $('#n_hideBox').hidden = isCms; $('#n_hidden').checked = !!(row && row.hidden);
+  $('#n_full').hidden = !isCms;
+  $('#n_url').value = cms ? cms.url || '' : '';
+  $('#n_body').innerHTML = safeBody(cms ? cms.body || '' : ''); countBody();
+  $('#nformMsg').textContent = ''; $('#nform').hidden = false; $('#nform').scrollIntoView({ behavior: 'smooth' });
+}
+function closeNews() { $('#nform').hidden = true; NEDIT = null; }
+$('#nAddBtn').onclick = () => openNews(null);
+$('#nCancelBtn').onclick = closeNews;
+$('#n_body').addEventListener('input', countBody);
+$('#n_body').addEventListener('paste', () => setTimeout(countBody, 50));
+$('#n_plain').onclick = () => {
+  const lines = ($('#n_body').innerText || '').split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  $('#n_body').innerHTML = lines.map((l) => '<p>' + esc(l) + '</p>').join(''); countBody();
+};
+function safeBody(h) {
+  return DOMPurify.sanitize(h, { ALLOWED_TAGS: ['p','br','ul','ol','li','strong','b','em','i','u','a','img','table','thead','tbody','tr','td','th','h2','h3','h4','h5','blockquote','sup','sub','hr','pre'], ALLOWED_ATTR: ['href','src','alt','colspan','rowspan'], ALLOW_DATA_ATTR: false });
+}
+function tidyBody(h) { return safeBody(h); }
+// Sanitize clipboard HTML before it reaches the live contenteditable DOM.
+$('#n_body').addEventListener('paste', (e) => {
+  e.preventDefault();
+  const html = e.clipboardData.getData('text/html') || esc(e.clipboardData.getData('text/plain')).replace(/\n/g, '<br>');
+  const fragment = document.createRange().createContextualFragment(safeBody(html));
+  const selection = window.getSelection();
+  if (!selection.rangeCount || !$('#n_body').contains(selection.anchorNode)) return;
+  const range = selection.getRangeAt(0); range.deleteContents();
+  const last = fragment.lastChild; range.insertNode(fragment);
+  if (last) { range.setStartAfter(last); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); }
+  countBody();
+});
+$('#n_body').addEventListener('drop', e => e.preventDefault());
+$('#nOkBtn').onclick = () => {
+  const err = (m) => { $('#nformMsg').className = 'msg err'; $('#nformMsg').textContent = m; };
+  const zhs = $('#n_tzhs').value.trim(), zht = $('#n_tzht').value.trim(), cat = $('#n_cat').value;
+  if (!zhs) return err('请填写简体中文标题');
+  if (NEDIT.kind !== 'cms') {
+    const row = newsRows().find((x) => x.id === NEDIT.id);
+    const o = NCMS.overrides[NEDIT.id] || {};
+    o.zhs = zhs; o.zht = zht; o.cat = row && cat !== row.baseCat ? cat : ''; o.hidden = $('#n_hidden').checked;
+    NCMS.overrides[NEDIT.id] = o; cleanOverride(NEDIT.id);
+  } else {
+    const date = $('#n_date').value, en = $('#n_ten').value.trim(), url = $('#n_url').value.trim();
+    const body = tidyBody($('#n_body').innerHTML), text = ($('#n_body').innerText || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return err('请选择发布日期');
+    if (!en) return err('请填写英文标题');
+    if (url && !/^https?:\/\//i.test(url) && !/^\/files\/\S+$/.test(url)) return err('原文链接需要以 http:// 或 https:// 开头');
+    if (!text && !url) return err('请粘贴正文，或至少填写原文链接');
+    if (body.length > 380000) return err('正文太长（含格式超过 38 万字符），请点"清除格式"后再试');
+    const item = { id: NEDIT.id || ('n-' + uid()), date, cat, title: { en, zhs, zht }, url, body: text ? body : '' };
+    const i = NCMS.items.findIndex((x) => x.id === item.id);
+    if (i >= 0) NCMS.items[i] = item; else NCMS.items.push(item);
+  }
+  closeNews(); renderNews(); setDirty(true, 'n');
+  $('#saveBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/* ===================== publish ===================== */
+async function postJSON(url, payload) {
+  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-password': PW }, body: JSON.stringify(payload) });
+  let j = {}; try { j = await r.json(); } catch (e) { /* non-JSON error page */ }
+  if (!r.ok) throw new Error(j.error === 'unauthorized' ? '密码已失效，请刷新页面重新登录' : j.error === 'storage_not_configured' ? '服务器的文件存储目录无法写入，请联系 IT' : j.error === 'too_large' ? '内容太大，请删减新闻正文后再发布' : ('发布失败：' + (j.error || ('HTTP ' + r.status))));
+  return j;
+}
+$('#saveBtn').onclick = async () => {
+  if ((!$('#form').hidden || !$('#nform').hidden) && !confirm('有正在编辑、但还没点"完成编辑"的内容，这部分不会被发布。继续发布其他修改吗？')) return;
+  $('#saveBtn').disabled = true; $('#saveBtn').classList.remove('pulse'); $('#saveMsg').className = 'msg'; $('#saveMsg').textContent = '发布中…';
+  try {
+    if (DIRTY_D) { const j = await postJSON('/api/docs', DATA); DATA = j.data; render(); DIRTY_D = false; }
+    if (DIRTY_N) { const j = await postJSON('/api/newscms', NCMS); NCMS = { items: j.data.items || [], overrides: j.data.overrides || {} }; if (SEC === 'news') renderNews(); DIRTY_N = false; }
+    setDirty(false, 'all');
+    $('#saveMsg').className = 'msg ok'; $('#saveMsg').textContent = '已发布，网站约 1 到 2 分钟内更新';
+  } catch (e) {
+    DIRTY = DIRTY_D || DIRTY_N; $('#saveBtn').disabled = !DIRTY; $('#saveBtn').classList.toggle('pulse', DIRTY);
+    $('#saveMsg').className = 'msg err'; $('#saveMsg').textContent = e.message;
+  }
+};
+</script>
+</body>
+</html>
